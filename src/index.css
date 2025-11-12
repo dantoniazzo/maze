@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Terminal styling */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #000000;
+  color: #22c55e;
+  font-family: 'Courier New', monospace;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Hide default input caret completely */
+input {
+  background-color: transparent !important;
+  color: #22c55e !important;
+  caret-color: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+input.caret-transparent {
+  caret-color: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  outline: none !important;
+}
+
+input.caret-transparent::selection {
+  background-color: #22c55e;
+  color: #000000;
+}
+
+/* Ensure no outline or border on inputs in all states */
+input:focus,
+input:hover,
+input:active {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+}
+
+/* Remove autofill styles */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px black inset !important;
+  -webkit-text-fill-color: #22c55e !important;
+  caret-color: transparent !important;
+}
