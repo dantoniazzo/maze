@@ -1,6 +1,12 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { io, Socket } from 'socket.io-client';
-import type { Position } from '../types/game';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+import { io, Socket } from "socket.io-client";
+import type { Position } from "../types/game";
 
 type MatchInfo = {
   roomId: string;
@@ -33,7 +39,7 @@ const WebSocketContext = createContext<WebSocketContextType | null>(null);
 export function useWebSocket() {
   const context = useContext(WebSocketContext);
   if (!context) {
-    throw new Error('useWebSocket must be used within WebSocketProvider');
+    throw new Error("useWebSocket must be used within WebSocketProvider");
   }
   return context;
 }
@@ -51,36 +57,36 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
 
   useEffect(() => {
-    const newSocket = io('http://localhost:3001');
+    const newSocket = io("http://localhost:3001");
 
-    newSocket.on('connect', () => {
-      console.log('Connected to server');
+    newSocket.on("connect", () => {
+      console.log("Connected to server");
       setIsConnected(true);
     });
 
-    newSocket.on('disconnect', () => {
-      console.log('Disconnected from server');
+    newSocket.on("disconnect", () => {
+      console.log("Disconnected from server");
       setIsConnected(false);
     });
 
-    newSocket.on('waiting-for-match', () => {
-      console.log('Waiting for opponent...');
+    newSocket.on("waiting-for-match", () => {
+      console.log("Waiting for opponent...");
       setIsWaitingForMatch(true);
     });
 
-    newSocket.on('match-found', (info: MatchInfo) => {
-      console.log('Match found!', info);
+    newSocket.on("match-found", (info: MatchInfo) => {
+      console.log("Match found!", info);
       setMatchInfo(info);
       setIsWaitingForMatch(false);
     });
 
-    newSocket.on('game-over', (info: GameOverInfo) => {
-      console.log('Game over', info);
+    newSocket.on("game-over", (info: GameOverInfo) => {
+      console.log("Game over", info);
       setGameOverInfo(info);
     });
 
-    newSocket.on('opponent-disconnected', () => {
-      console.log('Opponent disconnected');
+    newSocket.on("opponent-disconnected", () => {
+      console.log("Opponent disconnected");
       setOpponentDisconnected(true);
     });
 
@@ -93,19 +99,19 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 
   const findMatch = (username: string) => {
     if (socket) {
-      socket.emit('find-match', username);
+      socket.emit("find-match", username);
     }
   };
 
   const sendMove = (position: Position) => {
     if (socket) {
-      socket.emit('player-move', position);
+      socket.emit("player-move", position);
     }
   };
 
   const sendFinish = () => {
     if (socket) {
-      socket.emit('player-finished');
+      socket.emit("player-finished");
     }
   };
 
@@ -118,7 +124,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 
   const onOpponentMove = (callback: (position: Position) => void) => {
     if (socket) {
-      socket.on('opponent-move', callback);
+      socket.on("opponent-move", callback);
     }
   };
 
