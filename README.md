@@ -8,6 +8,6 @@ Node.js + React + TypeScript + Vite
 
 `npm i`
 
-`npm server`
+`npm run server`
 
 `npm run dev`
