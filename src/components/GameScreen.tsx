@@ -10,11 +10,21 @@ type GameScreenProps = {
 };
 
 export function GameScreen({ username, onGameEnd }: GameScreenProps) {
-  const { matchInfo, sendMove, sendFinish, onOpponentMove, gameOverInfo, opponentDisconnected, resetGame } = useWebSocket();
+  const {
+    matchInfo,
+    sendMove,
+    sendFinish,
+    onOpponentMove,
+    gameOverInfo,
+    opponentDisconnected,
+    resetGame,
+  } = useWebSocket();
 
   // Generate maze using seed from matchmaking
   const maze = useMemo(() => {
-    return matchInfo ? generateMaze(30, 40, matchInfo.mazeSeed) : generateMaze(30, 40);
+    return matchInfo
+      ? generateMaze(20, 25, matchInfo.mazeSeed)
+      : generateMaze(20, 25);
   }, [matchInfo]);
 
   const [playerPosition, setPlayerPosition] = useState<Position>({
@@ -60,7 +70,6 @@ export function GameScreen({ username, onGameEnd }: GameScreenProps) {
     return () => clearInterval(interval);
   }, [gameOver]);
 
-
   // Check if player reached the goal
   useEffect(() => {
     if (gameOver) return;
@@ -91,10 +100,13 @@ export function GameScreen({ username, onGameEnd }: GameScreenProps) {
     }
   }, [opponentDisconnected, username]);
 
-  const handlePlayerMove = useCallback((newPosition: Position) => {
-    setPlayerPosition(newPosition);
-    sendMove(newPosition);
-  }, [sendMove]);
+  const handlePlayerMove = useCallback(
+    (newPosition: Position) => {
+      setPlayerPosition(newPosition);
+      sendMove(newPosition);
+    },
+    [sendMove]
+  );
 
   // Listen for opponent moves
   useEffect(() => {
@@ -106,7 +118,7 @@ export function GameScreen({ username, onGameEnd }: GameScreenProps) {
   const elapsedTime = ((currentTime - startTime) / 1000).toFixed(1);
 
   // Calculate cell size based on screen
-  const cellSize = isMobile ? 12 : 16;
+  const cellSize = isMobile ? 14 : 18;
 
   // Blinking cursor for restart
   useEffect(() => {
@@ -222,7 +234,7 @@ export function GameScreen({ username, onGameEnd }: GameScreenProps) {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-black font-mono">
+    <div className="h-screen w-screen flex flex-col bg-black font-mono">
       {/* Header */}
       <div className="bg-black border-b-2 border-green-500 p-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
@@ -240,41 +252,39 @@ export function GameScreen({ username, onGameEnd }: GameScreenProps) {
       </div>
 
       {/* Split screen - horizontal on desktop, vertical on mobile */}
-      <div
-        className={`flex-1 flex ${
-          isMobile ? "flex-col" : "flex-row"
-        } overflow-hidden`}
-      >
-        {/* Your maze */}
-        <div className="flex-1 flex flex-col border-r-2 border-green-900">
-          <div className="bg-black px-4 py-2 border-b border-green-900">
-            <p className="text-xs font-semibold text-green-500">
-              &gt; YOUR MAZE
-            </p>
+      <div className="flex-1 flex items-center justify-center overflow-auto p-4">
+        <div className="flex flex-row gap-4 flex-wrap justify-center">
+          {/* Your maze */}
+          <div className="flex flex-col border-2 border-green-900 flex-shrink-0">
+            <div className="bg-black px-4 py-2 border-b border-green-900">
+              <p className="text-xs font-semibold text-green-500">
+                &gt; YOUR MAZE
+              </p>
+            </div>
+            <Maze
+              maze={maze}
+              playerPosition={playerPosition}
+              cellSize={cellSize}
+              onMove={handlePlayerMove}
+              isActive={true}
+            />
           </div>
-          <Maze
-            maze={maze}
-            playerPosition={playerPosition}
-            cellSize={cellSize}
-            onMove={handlePlayerMove}
-            isActive={true}
-          />
-        </div>
 
-        {/* Opponent's maze */}
-        <div className="flex-1 flex flex-col">
-          <div className="bg-black px-4 py-2 border-b border-green-900">
-            <p className="text-xs font-semibold text-red-500">
-              &gt; {opponentName.toUpperCase()}'S MAZE
-            </p>
+          {/* Opponent's maze */}
+          <div className="flex flex-col border-2 border-red-900 flex-shrink-0">
+            <div className="bg-black px-4 py-2 border-b border-red-900">
+              <p className="text-xs font-semibold text-red-500">
+                &gt; {opponentName.toUpperCase()}'S MAZE
+              </p>
+            </div>
+            <Maze
+              maze={maze}
+              playerPosition={opponentPosition}
+              cellSize={cellSize}
+              onMove={() => {}}
+              isActive={false}
+            />
           </div>
-          <Maze
-            maze={maze}
-            playerPosition={opponentPosition}
-            cellSize={cellSize}
-            onMove={() => {}}
-            isActive={false}
-          />
         </div>
       </div>
     </div>

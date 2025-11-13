@@ -191,12 +191,11 @@ function MazeComponent({
   }, [maze, playerPosition, opponentPosition, cellSize, mazeRows, mazeCols]);
 
   return (
-    <div className="flex items-center justify-center w-full h-full bg-black overflow-auto">
+    <div className="flex items-center justify-center bg-black">
       <canvas
         ref={canvasRef}
         width={mazeCols * cellSize}
         height={mazeRows * cellSize}
-        className="border border-green-900"
       />
     </div>
   );
