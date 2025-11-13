@@ -57,7 +57,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
 
   useEffect(() => {
-    const newSocket = io("http://localhost:3001");
+    const newSocket = io("https://maze-arpa.onrender.com");
 
     newSocket.on("connect", () => {
       console.log("Connected to server");

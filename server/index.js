@@ -1,7 +1,7 @@
-import express from 'express';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import cors from 'cors';
+import express from "express";
+import { createServer } from "http";
+import { Server } from "socket.io";
+import cors from "cors";
 
 const app = express();
 app.use(cors());
@@ -9,9 +9,9 @@ app.use(cors());
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: "http://localhost:5173",
-    methods: ["GET", "POST"]
-  }
+    origin: ["http://localhost:5173", "https://maze-web.onrender.com"],
+    methods: ["GET", "POST"],
+  },
 });
 
 // Matchmaking queue
@@ -23,10 +23,10 @@ function generateMazeSeed() {
   return Math.floor(Math.random() * 1000000);
 }
 
-io.on('connection', (socket) => {
+io.on("connection", (socket) => {
   console.log(`Player connected: ${socket.id}`);
 
-  socket.on('find-match', (username) => {
+  socket.on("find-match", (username) => {
     console.log(`${username} (${socket.id}) is looking for a match`);
 
     socket.username = username;
@@ -50,66 +50,66 @@ io.on('connection', (socket) => {
         mazeSeed,
         players: [
           { id: socket.id, username: socket.username },
-          { id: opponent.id, username: opponent.username }
+          { id: opponent.id, username: opponent.username },
         ],
-        startTime: Date.now()
+        startTime: Date.now(),
       };
 
       activeGames.set(socket.id, gameInfo);
       activeGames.set(opponent.id, gameInfo);
 
       // Notify both players
-      socket.emit('match-found', {
+      socket.emit("match-found", {
         roomId,
         mazeSeed,
         opponent: { id: opponent.id, username: opponent.username },
-        playerNumber: 1
+        playerNumber: 1,
       });
 
-      opponent.emit('match-found', {
+      opponent.emit("match-found", {
         roomId,
         mazeSeed,
         opponent: { id: socket.id, username: socket.username },
-        playerNumber: 2
+        playerNumber: 2,
       });
 
       console.log(`Match created: ${socket.username} vs ${opponent.username}`);
     } else {
       // No match yet, add to waiting queue
       waitingPlayers.push(socket);
-      socket.emit('waiting-for-match');
+      socket.emit("waiting-for-match");
       console.log(`${username} added to waiting queue`);
     }
   });
 
-  socket.on('player-move', (position) => {
+  socket.on("player-move", (position) => {
     const gameInfo = activeGames.get(socket.id);
     if (gameInfo) {
       // Broadcast position to opponent
-      socket.to(gameInfo.roomId).emit('opponent-move', position);
+      socket.to(gameInfo.roomId).emit("opponent-move", position);
     }
   });
 
-  socket.on('player-finished', () => {
+  socket.on("player-finished", () => {
     const gameInfo = activeGames.get(socket.id);
     if (gameInfo) {
       const finishTime = Date.now() - gameInfo.startTime;
 
       // Notify both players
-      io.to(gameInfo.roomId).emit('game-over', {
+      io.to(gameInfo.roomId).emit("game-over", {
         winner: socket.username,
-        time: finishTime / 1000
+        time: finishTime / 1000,
       });
 
       console.log(`${socket.username} won the game in ${finishTime / 1000}s`);
     }
   });
 
-  socket.on('disconnect', () => {
+  socket.on("disconnect", () => {
     console.log(`Player disconnected: ${socket.id}`);
 
     // Remove from waiting queue if present
-    const waitingIndex = waitingPlayers.findIndex(p => p.id === socket.id);
+    const waitingIndex = waitingPlayers.findIndex((p) => p.id === socket.id);
     if (waitingIndex !== -1) {
       waitingPlayers.splice(waitingIndex, 1);
       console.log(`Removed ${socket.username} from waiting queue`);
@@ -119,10 +119,10 @@ io.on('connection', (socket) => {
     const gameInfo = activeGames.get(socket.id);
     if (gameInfo) {
       // Notify opponent
-      socket.to(gameInfo.roomId).emit('opponent-disconnected');
+      socket.to(gameInfo.roomId).emit("opponent-disconnected");
 
       // Clean up game
-      gameInfo.players.forEach(player => {
+      gameInfo.players.forEach((player) => {
         activeGames.delete(player.id);
       });
 
