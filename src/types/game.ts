@@ -17,3 +17,11 @@ export type GameState = {
   gameOver: boolean;
   winner: Player | null;
 };
+
+export type GameType = 'maze' | 'snake' | 'pong';
+
+export type Game = {
+  id: GameType;
+  name: string;
+  description: string;
+};

@@ -40,18 +40,18 @@ export function UsernameEntry({ onSubmit }: UsernameEntryProps) {
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
           <pre className="text-green-500 text-xs mb-4">
-            {`███╗   ███╗ █████╗ ███████╗███████╗    ████████╗███████╗██████╗ ███╗   ███╗██╗███╗   ██╗ █████╗ ██╗
-████╗ ████║██╔══██╗╚══███╔╝██╔════╝    ╚══██╔══╝██╔════╝██╔══██╗████╗ ████║██║████╗  ██║██╔══██╗██║
-██╔████╔██║███████║  ███╔╝ █████╗         ██║   █████╗  ██████╔╝██╔████╔██║██║██╔██╗ ██║███████║██║
-██║╚██╔╝██║██╔══██║ ███╔╝  ██╔══╝         ██║   ██╔══╝  ██╔══██╗██║╚██╔╝██║██║██║╚██╗██║██╔══██║██║
-██║ ╚═╝ ██║██║  ██║███████╗███████╗       ██║   ███████╗██║  ██║██║ ╚═╝ ██║██║██║ ╚████║██║  ██║███████╗
-╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝       ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝`}
+            {`████████╗███████╗██████╗ ███╗   ███╗██╗███╗   ██╗ █████╗ ██╗          ██████╗  █████╗ ███╗   ███╗███████╗███╗   ███╗
+╚══██╔══╝██╔════╝██╔══██╗████╗ ████║██║████╗  ██║██╔══██╗██║         ██╔════╝ ██╔══██╗████╗ ████║██╔════╝████╗ ████║
+   ██║   █████╗  ██████╔╝██╔████╔██║██║██╔██╗ ██║███████║██║         ██║  ███╗███████║██╔████╔██║█████╗  ██╔████╔██║
+   ██║   ██╔══╝  ██╔══██╗██║╚██╔╝██║██║██║╚██╗██║██╔══██║██║         ██║   ██║██╔══██║██║╚██╔╝██║██╔══╝  ██║╚██╔╝██║
+   ██║   ███████╗██║  ██║██║ ╚═╝ ██║██║██║ ╚████║██║  ██║███████╗    ╚██████╔╝██║  ██║██║ ╚═╝ ██║███████╗██║ ╚═╝ ██║
+   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝     ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚═╝     ╚═╝`}
           </pre>
         </div>
 
         <div className="mb-4 text-green-400">
           <p>$ Initializing system...</p>
-          <p>$ Loading maze protocol...</p>
+          <p>$ Loading game protocols...</p>
           <p>$ Connection established</p>
         </div>
 
@@ -61,7 +61,7 @@ export function UsernameEntry({ onSubmit }: UsernameEntryProps) {
 
         <form onSubmit={handleSubmit} className="mb-4">
           <div className="flex items-center">
-            <span className="text-green-500 mr-2">root@maze:~$</span>
+            <span className="text-green-500 mr-2">root@terminal:~$</span>
             <span className="text-green-400">{username}</span>
             <span
               style={showCursor ? { opacity: 1 } : { opacity: 0 }}
@@ -88,8 +88,8 @@ export function UsernameEntry({ onSubmit }: UsernameEntryProps) {
 
         <div className="text-green-700 text-sm mt-8">
           <p>&gt; Type your username and press ENTER to connect</p>
-          <p>&gt; Use arrow keys to navigate maze</p>
-          <p>&gt; Reach the exit before your opponent</p>
+          <p>&gt; Select a game to play against an opponent</p>
+          <p>&gt; Race to victory!</p>
         </div>
 
         <div className="mt-8 text-green-900 text-xs">

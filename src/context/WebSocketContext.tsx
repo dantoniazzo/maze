@@ -6,13 +6,14 @@ import {
   type ReactNode,
 } from "react";
 import { io, Socket } from "socket.io-client";
-import type { Position } from "../types/game";
+import type { Position, GameType } from "../types/game";
 
 type MatchInfo = {
   roomId: string;
   mazeSeed: number;
   opponent: { id: string; username: string };
   playerNumber: number;
+  gameType: GameType;
 };
 
 type GameOverInfo = {
@@ -27,7 +28,7 @@ type WebSocketContextType = {
   gameOverInfo: GameOverInfo | null;
   isWaitingForMatch: boolean;
   opponentDisconnected: boolean;
-  findMatch: (username: string) => void;
+  findMatch: (username: string, gameType: GameType) => void;
   sendMove: (position: Position) => void;
   sendFinish: () => void;
   resetGame: () => void;
@@ -57,7 +58,8 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
 
   useEffect(() => {
-    const newSocket = io("https://maze-arpa.onrender.com");
+    const serverUrl = import.meta.env.DEV ? "http://localhost:3001" : "https://maze-arpa.onrender.com";
+    const newSocket = io(serverUrl);
 
     newSocket.on("connect", () => {
       console.log("Connected to server");
@@ -97,9 +99,9 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     };
   }, []);
 
-  const findMatch = (username: string) => {
+  const findMatch = (username: string, gameType: GameType) => {
     if (socket) {
-      socket.emit("find-match", username);
+      socket.emit("find-match", { username, gameType });
     }
   };
 
