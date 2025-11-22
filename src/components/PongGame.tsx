@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useWebSocket } from '../context/WebSocketContext';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,7 +34,8 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { matchInfo, socket, gameOverInfo, resetGame, opponentDisconnected } = useWebSocket();
 
-  const [gameState, setGameState] = useState<PongState>({
+  // Use refs for game state to avoid re-renders
+  const gameStateRef = useRef<PongState>({
     ballX: CANVAS_WIDTH / 2,
     ballY: CANVAS_HEIGHT / 2,
     ballVelX: BALL_SPEED,
@@ -45,6 +46,8 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
     player2Score: 0,
   });
 
+  // Only use state for things that need to trigger re-renders (scores and game over)
+  const [scores, setScores] = useState({ player1: 0, player2: 0 });
   const [gameOver, setGameOver] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
   const localPaddleYRef = useRef(CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2);
@@ -112,14 +115,16 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
     return () => clearInterval(interval);
   }, [gameOver, socket]);
 
+  // Handle opponent paddle movement without re-renders
   useEffect(() => {
     if (!socket) return;
 
     const handleOpponentPaddle = (y: number) => {
-      setGameState((prev) => ({
-        ...prev,
-        [isPlayer1 ? 'player2Y' : 'player1Y']: y,
-      }));
+      if (isPlayer1) {
+        gameStateRef.current.player2Y = y;
+      } else {
+        gameStateRef.current.player1Y = y;
+      }
     };
 
     socket.on('pong-opponent-paddle', handleOpponentPaddle);
@@ -129,11 +134,17 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
     };
   }, [socket, isPlayer1]);
 
+  // Handle game state updates for player 2 without re-renders
   useEffect(() => {
     if (!socket || isPlayer1) return;
 
     const handleGameStateUpdate = (state: PongState) => {
-      setGameState(state);
+      gameStateRef.current = state;
+
+      // Only update scores if they changed (triggers re-render only for score updates)
+      if (state.player1Score !== scores.player1 || state.player2Score !== scores.player2) {
+        setScores({ player1: state.player1Score, player2: state.player2Score });
+      }
     };
 
     socket.on('pong-game-state', handleGameStateUpdate);
@@ -141,128 +152,165 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
     return () => {
       socket.off('pong-game-state', handleGameStateUpdate);
     };
-  }, [socket, isPlayer1]);
+  }, [socket, isPlayer1, scores]);
 
+  // Game loop for player 1 only
   useEffect(() => {
     if (!isPlayer1 || gameOver) return;
 
     const interval = setInterval(() => {
-      setGameState((prev) => {
-        let newState = { ...prev };
+      const prev = gameStateRef.current;
 
-        if (newState.player1Score >= WINNING_SCORE || newState.player2Score >= WINNING_SCORE) {
-          return prev;
-        }
+      // Check if game is already over
+      if (prev.player1Score >= WINNING_SCORE || prev.player2Score >= WINNING_SCORE) {
+        return;
+      }
 
-        newState.ballX += newState.ballVelX;
-        newState.ballY += newState.ballVelY;
+      // Update ball position
+      let newBallX = prev.ballX + prev.ballVelX;
+      let newBallY = prev.ballY + prev.ballVelY;
+      let newBallVelX = prev.ballVelX;
+      let newBallVelY = prev.ballVelY;
 
-        if (newState.ballY <= 0 || newState.ballY >= CANVAS_HEIGHT - BALL_SIZE) {
-          newState.ballVelY = -newState.ballVelY;
-          newState.ballY = Math.max(0, Math.min(CANVAS_HEIGHT - BALL_SIZE, newState.ballY));
-        }
+      // Ball collision with top/bottom
+      if (newBallY <= 0 || newBallY >= CANVAS_HEIGHT - BALL_SIZE) {
+        newBallVelY = -newBallVelY;
+        newBallY = Math.max(0, Math.min(CANVAS_HEIGHT - BALL_SIZE, newBallY));
+      }
 
-        if (
-          newState.ballX <= PADDLE_WIDTH &&
-          newState.ballY + BALL_SIZE >= prev.player1Y &&
-          newState.ballY <= prev.player1Y + PADDLE_HEIGHT
-        ) {
-          newState.ballVelX = Math.abs(newState.ballVelX);
-          newState.ballX = PADDLE_WIDTH;
+      // Ball collision with paddles
+      // Left paddle (player 1)
+      if (
+        newBallX <= PADDLE_WIDTH &&
+        newBallY + BALL_SIZE >= prev.player1Y &&
+        newBallY <= prev.player1Y + PADDLE_HEIGHT
+      ) {
+        newBallVelX = Math.abs(newBallVelX);
+        newBallX = PADDLE_WIDTH;
 
-          const hitPos = (newState.ballY - prev.player1Y) / PADDLE_HEIGHT;
-          newState.ballVelY = (hitPos - 0.5) * 10;
-        }
+        const hitPos = (newBallY - prev.player1Y) / PADDLE_HEIGHT;
+        newBallVelY = (hitPos - 0.5) * 10;
+      }
 
-        if (
-          newState.ballX + BALL_SIZE >= CANVAS_WIDTH - PADDLE_WIDTH &&
-          newState.ballY + BALL_SIZE >= prev.player2Y &&
-          newState.ballY <= prev.player2Y + PADDLE_HEIGHT
-        ) {
-          newState.ballVelX = -Math.abs(newState.ballVelX);
-          newState.ballX = CANVAS_WIDTH - PADDLE_WIDTH - BALL_SIZE;
+      // Right paddle (player 2)
+      if (
+        newBallX + BALL_SIZE >= CANVAS_WIDTH - PADDLE_WIDTH &&
+        newBallY + BALL_SIZE >= prev.player2Y &&
+        newBallY <= prev.player2Y + PADDLE_HEIGHT
+      ) {
+        newBallVelX = -Math.abs(newBallVelX);
+        newBallX = CANVAS_WIDTH - PADDLE_WIDTH - BALL_SIZE;
 
-          const hitPos = (newState.ballY - prev.player2Y) / PADDLE_HEIGHT;
-          newState.ballVelY = (hitPos - 0.5) * 10;
-        }
+        const hitPos = (newBallY - prev.player2Y) / PADDLE_HEIGHT;
+        newBallVelY = (hitPos - 0.5) * 10;
+      }
 
-        if (newState.ballX < 0) {
-          newState.player2Score += 1;
-          newState.ballX = CANVAS_WIDTH / 2;
-          newState.ballY = CANVAS_HEIGHT / 2;
-          newState.ballVelX = -BALL_SPEED;
-          newState.ballVelY = BALL_SPEED * 0.6;
-        } else if (newState.ballX > CANVAS_WIDTH) {
-          newState.player1Score += 1;
-          newState.ballX = CANVAS_WIDTH / 2;
-          newState.ballY = CANVAS_HEIGHT / 2;
-          newState.ballVelX = BALL_SPEED;
-          newState.ballVelY = BALL_SPEED * 0.6;
-        }
+      let newPlayer1Score = prev.player1Score;
+      let newPlayer2Score = prev.player2Score;
 
-        if (newState.player1Score >= WINNING_SCORE || newState.player2Score >= WINNING_SCORE) {
-          const winnerName = newState.player1Score >= WINNING_SCORE ? username : opponentName;
+      // Score points
+      if (newBallX < 0) {
+        newPlayer2Score += 1;
+        newBallX = CANVAS_WIDTH / 2;
+        newBallY = CANVAS_HEIGHT / 2;
+        newBallVelX = -BALL_SPEED;
+        newBallVelY = BALL_SPEED * 0.6;
+      } else if (newBallX > CANVAS_WIDTH) {
+        newPlayer1Score += 1;
+        newBallX = CANVAS_WIDTH / 2;
+        newBallY = CANVAS_HEIGHT / 2;
+        newBallVelX = BALL_SPEED;
+        newBallVelY = BALL_SPEED * 0.6;
+      }
 
-          if (socket) {
-            socket.emit('pong-game-over', winnerName);
-          }
+      // Update game state ref
+      gameStateRef.current = {
+        ballX: newBallX,
+        ballY: newBallY,
+        ballVelX: newBallVelX,
+        ballVelY: newBallVelY,
+        player1Y: localPaddleYRef.current,
+        player2Y: prev.player2Y,
+        player1Score: newPlayer1Score,
+        player2Score: newPlayer2Score,
+      };
 
-          setGameOver(true);
-          setWinner(winnerName);
-        }
+      // Update scores in state if changed (triggers re-render only for score updates)
+      if (newPlayer1Score !== scores.player1 || newPlayer2Score !== scores.player2) {
+        setScores({ player1: newPlayer1Score, player2: newPlayer2Score });
+      }
 
-        newState.player1Y = localPaddleYRef.current;
+      // Check for winner after scoring
+      if (newPlayer1Score >= WINNING_SCORE || newPlayer2Score >= WINNING_SCORE) {
+        const winnerName = newPlayer1Score >= WINNING_SCORE ? username : opponentName;
 
         if (socket) {
-          socket.emit('pong-update-state', newState);
+          socket.emit('pong-game-over', winnerName);
         }
 
-        return newState;
-      });
+        setGameOver(true);
+        setWinner(winnerName);
+      }
+
+      // Broadcast state to opponent
+      if (socket) {
+        socket.emit('pong-update-state', gameStateRef.current);
+      }
     }, 1000 / 60);
 
     return () => clearInterval(interval);
-  }, [isPlayer1, gameOver, socket, username, opponentName]);
+  }, [isPlayer1, gameOver, socket, username, opponentName, scores]);
 
+  // Draw game at 60fps
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (gameOver) return;
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const drawGame = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
 
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
 
-    ctx.strokeStyle = '#94a3b8';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([10, 10]);
-    ctx.beginPath();
-    ctx.moveTo(CANVAS_WIDTH / 2, 0);
-    ctx.lineTo(CANVAS_WIDTH / 2, CANVAS_HEIGHT);
-    ctx.stroke();
-    ctx.setLineDash([]);
+      const state = gameStateRef.current;
 
-    ctx.fillStyle = '#3b82f6';
-    ctx.fillRect(0, gameState.player1Y, PADDLE_WIDTH, PADDLE_HEIGHT);
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    ctx.fillStyle = '#ef4444';
-    ctx.fillRect(CANVAS_WIDTH - PADDLE_WIDTH, gameState.player2Y, PADDLE_WIDTH, PADDLE_HEIGHT);
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([10, 10]);
+      ctx.beginPath();
+      ctx.moveTo(CANVAS_WIDTH / 2, 0);
+      ctx.lineTo(CANVAS_WIDTH / 2, CANVAS_HEIGHT);
+      ctx.stroke();
+      ctx.setLineDash([]);
 
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(gameState.ballX, gameState.ballY, BALL_SIZE, BALL_SIZE);
+      ctx.fillStyle = '#3b82f6';
+      ctx.fillRect(0, state.player1Y, PADDLE_WIDTH, PADDLE_HEIGHT);
 
-    ctx.font = '32px sans-serif';
-    ctx.fillStyle = '#3b82f6';
-    ctx.fillText(gameState.player1Score.toString(), CANVAS_WIDTH / 4, 50);
-    ctx.fillStyle = '#ef4444';
-    ctx.fillText(gameState.player2Score.toString(), (3 * CANVAS_WIDTH) / 4, 50);
-  }, [gameState]);
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(CANVAS_WIDTH - PADDLE_WIDTH, state.player2Y, PADDLE_WIDTH, PADDLE_HEIGHT);
 
-  const handlePlayAgain = () => {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(state.ballX, state.ballY, BALL_SIZE, BALL_SIZE);
+
+      ctx.font = '32px sans-serif';
+      ctx.fillStyle = '#3b82f6';
+      ctx.fillText(state.player1Score.toString(), CANVAS_WIDTH / 4, 50);
+      ctx.fillStyle = '#ef4444';
+      ctx.fillText(state.player2Score.toString(), (3 * CANVAS_WIDTH) / 4, 50);
+    };
+
+    const animationFrame = setInterval(drawGame, 1000 / 60);
+
+    return () => clearInterval(animationFrame);
+  }, [gameOver]);
+
+  const handlePlayAgain = useCallback(() => {
     resetGame();
     onGameEnd();
-  };
+  }, [resetGame, onGameEnd]);
 
   if (gameOver && winner) {
     const isWinner = winner === username;
@@ -285,7 +333,7 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="text-center text-2xl font-bold">
-              {gameState.player1Score} - {gameState.player2Score}
+              {scores.player1} - {scores.player2}
             </div>
 
             <Separator />
