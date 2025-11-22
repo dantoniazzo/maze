@@ -1,4 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Gamepad2 } from "lucide-react";
 
 type UsernameEntryProps = {
   onSubmit: (username: string) => void;
@@ -6,21 +11,6 @@ type UsernameEntryProps = {
 
 export function UsernameEntry({ onSubmit }: UsernameEntryProps) {
   const [username, setUsername] = useState("");
-  const [showCursor, setShowCursor] = useState(true);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // Blinking cursor effect
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setShowCursor((prev) => !prev);
-    }, 530);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Auto-focus on mount
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,73 +19,44 @@ export function UsernameEntry({ onSubmit }: UsernameEntryProps) {
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && username.trim()) {
-      onSubmit(username.trim());
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-black text-green-500 p-8 font-mono">
-      <div className="max-w-2xl mx-auto">
-        <div className="mb-8">
-          <pre className="text-green-500 text-xs mb-4">
-            {`████████╗███████╗██████╗ ███╗   ███╗██╗███╗   ██╗ █████╗ ██╗          ██████╗  █████╗ ███╗   ███╗███████╗███╗   ███╗
-╚══██╔══╝██╔════╝██╔══██╗████╗ ████║██║████╗  ██║██╔══██╗██║         ██╔════╝ ██╔══██╗████╗ ████║██╔════╝████╗ ████║
-   ██║   █████╗  ██████╔╝██╔████╔██║██║██╔██╗ ██║███████║██║         ██║  ███╗███████║██╔████╔██║█████╗  ██╔████╔██║
-   ██║   ██╔══╝  ██╔══██╗██║╚██╔╝██║██║██║╚██╗██║██╔══██║██║         ██║   ██║██╔══██║██║╚██╔╝██║██╔══╝  ██║╚██╔╝██║
-   ██║   ███████╗██║  ██║██║ ╚═╝ ██║██║██║ ╚████║██║  ██║███████╗    ╚██████╔╝██║  ██║██║ ╚═╝ ██║███████╗██║ ╚═╝ ██║
-   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝     ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚═╝     ╚═╝`}
-          </pre>
-        </div>
-
-        <div className="mb-4 text-green-400">
-          <p>$ Initializing system...</p>
-          <p>$ Loading game protocols...</p>
-          <p>$ Connection established</p>
-        </div>
-
-        <div className="mb-2 text-green-500">
-          <p>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="mb-4">
-          <div className="flex items-center">
-            <span className="text-green-500 mr-2">root@terminal:~$</span>
-            <span className="text-green-400">{username}</span>
-            <span
-              style={showCursor ? { opacity: 1 } : { opacity: 0 }}
-              className={`text-green-400`}
-            >
-              _
-            </span>
-            <input
-              ref={inputRef}
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              onBlur={(e) => e.target.focus()}
-              onKeyDown={handleKeyDown}
-              className="absolute"
-              style={{
-                opacity: 0,
-              }}
-              spellCheck={false}
-              autoComplete="off"
-            />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="space-y-1 text-center">
+          <div className="flex justify-center mb-4">
+            <div className="p-3 bg-primary/10 rounded-full">
+              <Gamepad2 className="h-8 w-8 text-primary" />
+            </div>
           </div>
-        </form>
-
-        <div className="text-green-700 text-sm mt-8">
-          <p>&gt; Type your username and press ENTER to connect</p>
-          <p>&gt; Select a game to play against an opponent</p>
-          <p>&gt; Race to victory!</p>
-        </div>
-
-        <div className="mt-8 text-green-900 text-xs">
-          <p>System v1.0.0 | Status: READY</p>
-        </div>
-      </div>
+          <CardTitle className="text-3xl font-bold">Classic Games</CardTitle>
+          <CardDescription className="text-base">
+            Enter your username to start playing
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                type="text"
+                placeholder="Enter your username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoFocus
+                className="text-base"
+              />
+            </div>
+            <Button
+              type="submit"
+              className="w-full text-base py-5"
+              disabled={!username.trim()}
+            >
+              Continue
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

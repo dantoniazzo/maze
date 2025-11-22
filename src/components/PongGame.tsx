@@ -1,5 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useWebSocket } from '../context/WebSocketContext';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Trophy, Users } from "lucide-react";
 
 type PongGameProps = {
   username: string;
@@ -43,33 +47,12 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
 
   const [gameOver, setGameOver] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
-  const [restartInput, setRestartInput] = useState('');
-  const [showCursor, setShowCursor] = useState(true);
-  const restartInputRef = useRef<HTMLInputElement>(null);
   const localPaddleYRef = useRef(CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2);
 
   const keysPressed = useRef<Set<string>>(new Set());
   const isPlayer1 = matchInfo?.playerNumber === 1;
   const opponentName = matchInfo?.opponent.username || 'Opponent';
 
-  // Blinking cursor for restart
-  useEffect(() => {
-    if (!gameOver) return;
-
-    const interval = setInterval(() => {
-      setShowCursor((prev) => !prev);
-    }, 530);
-    return () => clearInterval(interval);
-  }, [gameOver]);
-
-  // Auto-focus restart input
-  useEffect(() => {
-    if (gameOver) {
-      restartInputRef.current?.focus();
-    }
-  }, [gameOver]);
-
-  // Handle game over from WebSocket
   useEffect(() => {
     if (gameOverInfo) {
       setGameOver(true);
@@ -77,7 +60,6 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
     }
   }, [gameOverInfo]);
 
-  // Handle opponent disconnection
   useEffect(() => {
     if (opponentDisconnected) {
       setGameOver(true);
@@ -85,7 +67,6 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
     }
   }, [opponentDisconnected, username]);
 
-  // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
@@ -107,7 +88,6 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
     };
   }, []);
 
-  // Update local paddle position
   useEffect(() => {
     if (gameOver) return;
 
@@ -132,7 +112,6 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
     return () => clearInterval(interval);
   }, [gameOver, socket]);
 
-  // Listen for opponent paddle movement
   useEffect(() => {
     if (!socket) return;
 
@@ -150,7 +129,6 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
     };
   }, [socket, isPlayer1]);
 
-  // Listen for game state updates (only player 2 receives this)
   useEffect(() => {
     if (!socket || isPlayer1) return;
 
@@ -165,7 +143,6 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
     };
   }, [socket, isPlayer1]);
 
-  // Game loop (only player 1 runs the authoritative simulation)
   useEffect(() => {
     if (!isPlayer1 || gameOver) return;
 
@@ -173,23 +150,18 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
       setGameState((prev) => {
         let newState = { ...prev };
 
-        // Check if game is already over
         if (newState.player1Score >= WINNING_SCORE || newState.player2Score >= WINNING_SCORE) {
-          return prev; // Stop updating if game is over
+          return prev;
         }
 
-        // Update ball position
         newState.ballX += newState.ballVelX;
         newState.ballY += newState.ballVelY;
 
-        // Ball collision with top/bottom
         if (newState.ballY <= 0 || newState.ballY >= CANVAS_HEIGHT - BALL_SIZE) {
           newState.ballVelY = -newState.ballVelY;
           newState.ballY = Math.max(0, Math.min(CANVAS_HEIGHT - BALL_SIZE, newState.ballY));
         }
 
-        // Ball collision with paddles
-        // Left paddle (player 1)
         if (
           newState.ballX <= PADDLE_WIDTH &&
           newState.ballY + BALL_SIZE >= prev.player1Y &&
@@ -198,12 +170,10 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
           newState.ballVelX = Math.abs(newState.ballVelX);
           newState.ballX = PADDLE_WIDTH;
 
-          // Add spin based on where ball hits paddle
           const hitPos = (newState.ballY - prev.player1Y) / PADDLE_HEIGHT;
           newState.ballVelY = (hitPos - 0.5) * 10;
         }
 
-        // Right paddle (player 2)
         if (
           newState.ballX + BALL_SIZE >= CANVAS_WIDTH - PADDLE_WIDTH &&
           newState.ballY + BALL_SIZE >= prev.player2Y &&
@@ -212,12 +182,10 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
           newState.ballVelX = -Math.abs(newState.ballVelX);
           newState.ballX = CANVAS_WIDTH - PADDLE_WIDTH - BALL_SIZE;
 
-          // Add spin
           const hitPos = (newState.ballY - prev.player2Y) / PADDLE_HEIGHT;
           newState.ballVelY = (hitPos - 0.5) * 10;
         }
 
-        // Score points
         if (newState.ballX < 0) {
           newState.player2Score += 1;
           newState.ballX = CANVAS_WIDTH / 2;
@@ -232,24 +200,19 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
           newState.ballVelY = BALL_SPEED * 0.6;
         }
 
-        // Check for winner after scoring
         if (newState.player1Score >= WINNING_SCORE || newState.player2Score >= WINNING_SCORE) {
           const winnerName = newState.player1Score >= WINNING_SCORE ? username : opponentName;
 
-          // Emit game over to both players
           if (socket) {
             socket.emit('pong-game-over', winnerName);
           }
 
-          // Set local game over state
           setGameOver(true);
           setWinner(winnerName);
         }
 
-        // Update player 1's paddle in the state
         newState.player1Y = localPaddleYRef.current;
 
-        // Broadcast state to opponent
         if (socket) {
           socket.emit('pong-update-state', newState);
         }
@@ -261,7 +224,6 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
     return () => clearInterval(interval);
   }, [isPlayer1, gameOver, socket, username, opponentName]);
 
-  // Draw game
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -269,12 +231,10 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Clear canvas
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = '#1e293b';
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // Draw center line
-    ctx.strokeStyle = '#22c55e';
+    ctx.strokeStyle = '#94a3b8';
     ctx.lineWidth = 2;
     ctx.setLineDash([10, 10]);
     ctx.beginPath();
@@ -283,148 +243,101 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Draw paddles
-    ctx.fillStyle = '#22c55e';
+    ctx.fillStyle = '#3b82f6';
     ctx.fillRect(0, gameState.player1Y, PADDLE_WIDTH, PADDLE_HEIGHT);
 
     ctx.fillStyle = '#ef4444';
     ctx.fillRect(CANVAS_WIDTH - PADDLE_WIDTH, gameState.player2Y, PADDLE_WIDTH, PADDLE_HEIGHT);
 
-    // Draw ball
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(gameState.ballX, gameState.ballY, BALL_SIZE, BALL_SIZE);
 
-    // Draw scores
-    ctx.font = '32px monospace';
-    ctx.fillStyle = '#22c55e';
+    ctx.font = '32px sans-serif';
+    ctx.fillStyle = '#3b82f6';
     ctx.fillText(gameState.player1Score.toString(), CANVAS_WIDTH / 4, 50);
     ctx.fillStyle = '#ef4444';
     ctx.fillText(gameState.player2Score.toString(), (3 * CANVAS_WIDTH) / 4, 50);
   }, [gameState]);
 
-  const handleRestartKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      if (
-        restartInput.toLowerCase() === 'restart' ||
-        restartInput.toLowerCase() === 'play'
-      ) {
-        resetGame();
-        onGameEnd();
-      }
-      setRestartInput('');
-    }
+  const handlePlayAgain = () => {
+    resetGame();
+    onGameEnd();
   };
 
   if (gameOver && winner) {
+    const isWinner = winner === username;
+
     return (
-      <div className="min-h-screen bg-black text-green-500 p-8 font-mono">
-        <div className="max-w-2xl mx-auto">
-          <div className="mb-8">
-            {winner === username ? (
-              <>
-                <pre className="text-green-500 text-xs mb-4">
-                  {`
-██╗   ██╗██╗ ██████╗████████╗ ██████╗ ██████╗ ██╗   ██╗██╗
-██║   ██║██║██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗╚██╗ ██╔╝██║
-██║   ██║██║██║        ██║   ██║   ██║██████╔╝ ╚████╔╝ ██║
-╚██╗ ██╔╝██║██║        ██║   ██║   ██║██╔══██╗  ╚██╔╝  ╚═╝
- ╚████╔╝ ██║╚██████╗   ██║   ╚██████╔╝██║  ██║   ██║   ██╗
-  ╚═══╝  ╚═╝ ╚═════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝
-`}
-                </pre>
-                <p className="text-green-400 mb-2">$ Winner: {winner}</p>
-              </>
-            ) : (
-              <>
-                <pre className="text-red-500 text-xs mb-4">
-                  {`
-██████╗ ███████╗███████╗███████╗ █████╗ ████████╗███████╗██████╗
-██╔══██╗██╔════╝██╔════╝██╔════╝██╔══██╗╚══██╔══╝██╔════╝██╔══██╗
-██║  ██║█████╗  █████╗  █████╗  ███████║   ██║   █████╗  ██║  ██║
-██║  ██║██╔══╝  ██╔══╝  ██╔══╝  ██╔══██║   ██║   ██╔══╝  ██║  ██║
-██████╔╝███████╗██║     ███████╗██║  ██║   ██║   ███████╗██████╔╝
-╚═════╝ ╚══════╝╚═╝     ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═════╝
-`}
-                </pre>
-                <p className="text-red-400 mb-2">$ Winner: {winner}</p>
-              </>
-            )}
-            <p className="text-green-600">
-              $ Final Score: {gameState.player1Score} - {gameState.player2Score}
-            </p>
-            <p className="text-green-700">$ Match ended</p>
-          </div>
-
-          <div className="mb-2 text-green-500">
-            <p>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</p>
-          </div>
-
-          <div className="mb-4">
-            <div className="flex items-center mb-2">
-              <span className="text-green-500 mr-2">root@terminal:~$</span>
-              <span className="text-green-400">{restartInput}</span>
-              <span
-                style={showCursor ? { opacity: 1 } : { opacity: 0 }}
-                className="text-green-400"
-              >
-                _
-              </span>
-              <input
-                ref={restartInputRef}
-                type="text"
-                value={restartInput}
-                onChange={(e) => setRestartInput(e.target.value)}
-                onKeyDown={handleRestartKeyDown}
-                style={{ opacity: 0 }}
-                onBlur={(e) => e.target.focus()}
-                className="absolute"
-                spellCheck={false}
-                autoComplete="off"
-              />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+        <Card className="w-full max-w-md shadow-lg">
+          <CardHeader className="space-y-1 text-center">
+            <div className="flex justify-center mb-4">
+              <div className={`p-3 rounded-full ${isWinner ? 'bg-green-100' : 'bg-red-100'}`}>
+                <Trophy className={`h-8 w-8 ${isWinner ? 'text-green-600' : 'text-red-600'}`} />
+              </div>
             </div>
-          </div>
+            <CardTitle className="text-3xl font-bold">
+              {isWinner ? "Victory!" : "Defeated"}
+            </CardTitle>
+            <p className="text-muted-foreground">
+              Winner: <span className="font-semibold text-foreground">{winner}</span>
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="text-center text-2xl font-bold">
+              {gameState.player1Score} - {gameState.player2Score}
+            </div>
 
-          <div className="text-green-700 text-sm mt-8">
-            <p>&gt; Type 'restart' or 'play' and press ENTER to play again</p>
-          </div>
+            <Separator />
 
-          <div className="mt-8 text-green-900 text-xs">
-            <p>System ready | Awaiting command...</p>
-          </div>
-        </div>
+            <div className="space-y-3">
+              <Button
+                onClick={handlePlayAgain}
+                className="w-full text-base py-5"
+              >
+                Play Again
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-black font-mono">
-      {/* Header */}
-      <div className="bg-black border-b-2 border-green-500 p-4">
+    <div className="h-screen w-screen flex flex-col bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="bg-white border-b shadow-sm p-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div>
-            <h2 className="text-lg font-bold text-green-500">&gt; PONG DUEL</h2>
-            <p className="text-sm text-green-600">
-              $ First to {WINNING_SCORE} points wins
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Trophy className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold">Pong Duel</h2>
+              <p className="text-sm text-muted-foreground">
+                First to {WINNING_SCORE} points wins
+              </p>
+            </div>
           </div>
-          <div className="text-right">
-            <p className="text-sm font-semibold text-green-400">{username}</p>
-            <p className="text-sm text-green-700">vs {opponentName}</p>
+          <div className="flex items-center gap-2 text-sm">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <span className="font-semibold">{username}</span>
+            <span className="text-muted-foreground">vs</span>
+            <span className="font-semibold">{opponentName}</span>
           </div>
         </div>
       </div>
 
-      {/* Game Canvas */}
       <div className="flex-1 flex items-center justify-center">
         <div className="flex flex-col items-center">
           <div className="mb-4 flex justify-between w-full max-w-4xl px-8">
             <div className="text-center">
-              <p className="text-xs font-semibold text-green-500">
+              <p className="text-xs font-semibold text-blue-600">
                 {isPlayer1 ? `${username} (YOU)` : opponentName}
               </p>
             </div>
             <div className="text-center">
-              <p className="text-xs font-semibold text-red-500">
+              <p className="text-xs font-semibold text-red-600">
                 {isPlayer1 ? opponentName : `${username} (YOU)`}
               </p>
             </div>
@@ -433,10 +346,10 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
             ref={canvasRef}
             width={CANVAS_WIDTH}
             height={CANVAS_HEIGHT}
-            className="border-2 border-green-500"
+            className="border-2 border-slate-300 rounded-lg shadow-lg"
           />
-          <div className="mt-4 text-green-700 text-sm">
-            <p>&gt; Use ↑↓ arrow keys to move your paddle</p>
+          <div className="mt-4 text-muted-foreground text-sm">
+            <p>Use ↑↓ arrow keys to move your paddle</p>
           </div>
         </div>
       </div>

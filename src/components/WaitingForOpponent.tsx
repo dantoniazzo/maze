@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 import { useWebSocket } from '../context/WebSocketContext';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2, Users } from "lucide-react";
 
 type WaitingForOpponentProps = {
   username: string;
@@ -12,7 +14,6 @@ export function WaitingForOpponent({
 }: WaitingForOpponentProps) {
   const { matchInfo } = useWebSocket();
 
-  // Start game when match is found
   useEffect(() => {
     if (matchInfo) {
       onMatchFound();
@@ -20,60 +21,31 @@ export function WaitingForOpponent({
   }, [matchInfo, onMatchFound]);
 
   return (
-    <div className="min-h-screen bg-black text-green-500 p-8 font-mono">
-      <div className="max-w-2xl mx-auto">
-        <div className="mb-8">
-          <p className="text-green-400">
-            $ User:{' '}
-            <span className="text-green-300 font-bold">{username}</span>
-          </p>
-          <p className="text-green-600">$ Connection established</p>
-          <p className="text-green-700">$ Matchmaking initiated</p>
-        </div>
-
-        <div className="mb-2 text-green-500">
-          <p>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</p>
-        </div>
-
-        <div className="mb-6 text-green-400">
-          <p className="mb-2">TERMINAL GAMES v1.0</p>
-        </div>
-
-        <div className="mb-2 text-green-500">
-          <p>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</p>
-        </div>
-
-        <div className="flex flex-col items-center justify-center py-16">
-          <div className="mb-8">
-            <div className="flex space-x-2">
-              <span className="text-green-400 text-2xl animate-pulse">.</span>
-              <span
-                className="text-green-400 text-2xl animate-pulse"
-                style={{ animationDelay: '0.2s' }}
-              >
-                .
-              </span>
-              <span
-                className="text-green-400 text-2xl animate-pulse"
-                style={{ animationDelay: '0.4s' }}
-              >
-                .
-              </span>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="space-y-1 text-center">
+          <div className="flex justify-center mb-4">
+            <div className="p-3 bg-primary/10 rounded-full">
+              <Users className="h-8 w-8 text-primary" />
             </div>
           </div>
-
-          <p className="text-green-400 text-lg mb-2 animate-pulse">
-            &gt; Waiting for opponent...
-          </p>
-          <p className="text-green-600 text-sm">
+          <CardTitle className="text-2xl font-bold">Finding Opponent</CardTitle>
+          <CardDescription className="text-base">
             Searching for another player to match with
-          </p>
-        </div>
-
-        <div className="mt-8 text-green-900 text-xs">
-          <p>System status | Matchmaking in progress...</p>
-        </div>
-      </div>
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center space-y-6 py-8">
+          <Loader2 className="h-16 w-16 text-primary animate-spin" />
+          <div className="text-center space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Player: <span className="font-semibold text-foreground">{username}</span>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              This usually takes just a few seconds...
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

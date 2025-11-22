@@ -1,162 +1,93 @@
-import { useState, useEffect, useRef } from "react";
 import type { Game, GameType } from "../types/game";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Gamepad2, User, Grid3x3, Zap, Apple } from "lucide-react";
 
 type GameSelectionProps = {
   username: string;
   onGameSelect: (gameType: GameType) => void;
 };
 
-const AVAILABLE_GAMES: Game[] = [
+const AVAILABLE_GAMES: (Game & { icon: typeof Grid3x3 })[] = [
   {
     id: "maze",
     name: "Maze Race",
     description: "Navigate through a maze. First to the exit wins!",
+    icon: Grid3x3,
   },
   {
     id: "pong",
     name: "Pong Duel",
     description: "Classic pong. First to 5 points wins!",
+    icon: Zap,
   },
   {
     id: "snake",
     name: "Snake Battle",
     description: "Grow your snake. Longest snake after 60s wins!",
+    icon: Apple,
   },
 ];
 
 export function GameSelection({ username, onGameSelect }: GameSelectionProps) {
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [showCursor, setShowCursor] = useState(true);
-  const [isReady, setIsReady] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // Blinking cursor effect
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setShowCursor((prev) => !prev);
-    }, 530);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Auto-focus on mount and delay keyboard activation
-  useEffect(() => {
-    containerRef.current?.focus();
-    // Delay to prevent Enter key from username submission triggering selection
-    const timer = setTimeout(() => {
-      setIsReady(true);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Handle keyboard navigation
-  useEffect(() => {
-    if (!isReady) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setSelectedIndex((prev) =>
-          prev > 0 ? prev - 1 : AVAILABLE_GAMES.length - 1
-        );
-      } else if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setSelectedIndex((prev) =>
-          prev < AVAILABLE_GAMES.length - 1 ? prev + 1 : 0
-        );
-      } else if (e.key === "Enter") {
-        e.preventDefault();
-        // Allow selecting all available games
-        const selectedGame = AVAILABLE_GAMES[selectedIndex].id;
-        if (selectedGame === "maze" || selectedGame === "pong" || selectedGame === "snake") {
-          onGameSelect(selectedGame);
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedIndex, onGameSelect, isReady]);
+  const handleGameSelect = (gameType: GameType) => {
+    onGameSelect(gameType);
+  };
 
   return (
-    <div
-      ref={containerRef}
-      tabIndex={0}
-      className="min-h-screen bg-black text-green-500 p-8 font-mono outline-none"
-    >
-      <div className="max-w-2xl mx-auto">
-        <div className="mb-8">
-          <p className="text-green-400">
-            $ User authenticated:{" "}
-            <span className="text-green-300 font-bold">{username}</span>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 py-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <div className="p-3 bg-primary/10 rounded-full">
+              <Gamepad2 className="h-8 w-8 text-primary" />
+            </div>
+          </div>
+          <h1 className="text-4xl font-bold mb-2">Classic Games</h1>
+          <div className="flex items-center justify-center gap-2 text-muted-foreground">
+            <User className="h-4 w-4" />
+            <span className="font-medium">{username}</span>
+          </div>
+        </div>
+
+        <Separator className="mb-8" />
+
+        <div className="mb-6">
+          <h2 className="text-2xl font-semibold mb-2 text-center">Choose Your Game</h2>
+          <p className="text-center text-muted-foreground">
+            Select a game to find an opponent and start playing
           </p>
-          <p className="text-green-600">$ Connection established</p>
-          <p className="text-green-700">$ Game protocols loaded</p>
         </div>
 
-        <div className="mb-2 text-green-500">
-          <p>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</p>
-        </div>
-
-        <div className="mb-6 text-green-400">
-          <p className="mb-2">TERMINAL GAMES v1.0</p>
-          <p className="text-green-600 text-sm mb-1">Select a game to play</p>
-        </div>
-
-        <div className="mb-2 text-green-500">
-          <p>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</p>
-        </div>
-
-        <div className="mb-8">
-          {AVAILABLE_GAMES.map((game, index) => {
-            const isSelected = index === selectedIndex;
-            const isAvailable = game.id === "maze" || game.id === "pong" || game.id === "snake";
-
+        <div className="grid md:grid-cols-3 gap-4">
+          {AVAILABLE_GAMES.map((game) => {
+            const Icon = game.icon;
             return (
-              <div
+              <Card
                 key={game.id}
-                className={`mb-3 p-3 border ${
-                  isSelected
-                    ? "border-green-500 bg-green-950 bg-opacity-20"
-                    : "border-green-900"
-                } ${!isAvailable ? "opacity-50" : ""}`}
+                className="relative hover:shadow-lg transition-all duration-200 cursor-pointer border-2 hover:border-primary/50"
+                onClick={() => handleGameSelect(game.id as GameType)}
               >
-                <div className="flex items-center mb-1">
-                  {isSelected && (
-                    <span
-                      className="mr-2"
-                      style={showCursor ? { opacity: 1 } : { opacity: 0 }}
-                    >
-                      &gt;
-                    </span>
-                  )}
-                  {!isSelected && <span className="mr-2 opacity-0">&gt;</span>}
-                  <span
-                    className={`font-bold ${
-                      isSelected ? "text-green-400" : "text-green-600"
-                    }`}
-                  >
-                    {game.name}
-                  </span>
-                </div>
-                <p
-                  className={`ml-5 text-sm ${
-                    isSelected ? "text-green-500" : "text-green-700"
-                  }`}
-                >
-                  {game.description}
-                </p>
-              </div>
+                <CardHeader>
+                  <div className="flex justify-center mb-3">
+                    <div className="p-3 bg-primary/10 rounded-lg">
+                      <Icon className="h-8 w-8 text-primary" />
+                    </div>
+                  </div>
+                  <CardTitle className="text-center">{game.name}</CardTitle>
+                  <CardDescription className="text-center">
+                    {game.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button className="w-full" variant="default">
+                    Play Now
+                  </Button>
+                </CardContent>
+              </Card>
             );
           })}
-        </div>
-
-        <div className="text-green-700 text-sm mt-8">
-          <p>&gt; Use ↑↓ arrow keys to navigate</p>
-          <p>&gt; Press ENTER to select game and find opponent</p>
-        </div>
-
-        <div className="mt-8 text-green-900 text-xs">
-          <p>System ready | Awaiting selection...</p>
         </div>
       </div>
     </div>

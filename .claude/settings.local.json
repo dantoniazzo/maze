@@ -7,7 +7,10 @@
       "Bash(npm run build:*)",
       "Bash(lsof:*)",
       "Bash(xargs:*)",
-      "Bash(kill:*)"
+      "Bash(kill:*)",
+      "Bash(npx shadcn@latest init -d)",
+      "Bash(npx shadcn@latest init:*)",
+      "Bash(npx shadcn@latest add:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,5 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useWebSocket } from '../context/WebSocketContext';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Trophy, Clock, Users } from "lucide-react";
 
 type SnakeGameProps = {
   username: string;
@@ -24,7 +28,7 @@ const GRID_SIZE = 20;
 const CELL_SIZE = 20;
 const CANVAS_WIDTH = GRID_SIZE * CELL_SIZE;
 const CANVAS_HEIGHT = GRID_SIZE * CELL_SIZE;
-const GAME_DURATION = 60; // 60 seconds
+const GAME_DURATION = 60;
 
 export function SnakeGame({ username, onGameEnd }: SnakeGameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -48,32 +52,11 @@ export function SnakeGame({ username, onGameEnd }: SnakeGameProps) {
   const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
   const [gameOver, setGameOver] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
-  const [restartInput, setRestartInput] = useState('');
-  const [showCursor, setShowCursor] = useState(true);
-  const restartInputRef = useRef<HTMLInputElement>(null);
 
   const directionRef = useRef<Direction>('RIGHT');
   const nextDirectionRef = useRef<Direction>('RIGHT');
   const opponentName = matchInfo?.opponent.username || 'Opponent';
 
-  // Blinking cursor for restart
-  useEffect(() => {
-    if (!gameOver) return;
-
-    const interval = setInterval(() => {
-      setShowCursor((prev) => !prev);
-    }, 530);
-    return () => clearInterval(interval);
-  }, [gameOver]);
-
-  // Auto-focus restart input
-  useEffect(() => {
-    if (gameOver) {
-      restartInputRef.current?.focus();
-    }
-  }, [gameOver]);
-
-  // Handle game over from WebSocket
   useEffect(() => {
     if (gameOverInfo) {
       setGameOver(true);
@@ -81,7 +64,6 @@ export function SnakeGame({ username, onGameEnd }: SnakeGameProps) {
     }
   }, [gameOverInfo]);
 
-  // Handle opponent disconnection
   useEffect(() => {
     if (opponentDisconnected) {
       setGameOver(true);
@@ -89,7 +71,6 @@ export function SnakeGame({ username, onGameEnd }: SnakeGameProps) {
     }
   }, [opponentDisconnected, username]);
 
-  // Generate random food position
   const generateFood = (snake: Position[]): Position => {
     let food: Position;
     do {
@@ -101,7 +82,6 @@ export function SnakeGame({ username, onGameEnd }: SnakeGameProps) {
     return food;
   };
 
-  // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (gameOver) return;
@@ -134,14 +114,12 @@ export function SnakeGame({ username, onGameEnd }: SnakeGameProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gameOver]);
 
-  // Game timer
   useEffect(() => {
     if (gameOver) return;
 
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1 && socket) {
-          // Time's up - emit game over
           socket.emit('snake-game-over', { username, score: mySnake.score });
           return 0;
         }
@@ -152,7 +130,6 @@ export function SnakeGame({ username, onGameEnd }: SnakeGameProps) {
     return () => clearInterval(timer);
   }, [gameOver, socket, username, mySnake.score]);
 
-  // Game loop
   useEffect(() => {
     if (gameOver) return;
 
@@ -177,15 +154,12 @@ export function SnakeGame({ username, onGameEnd }: SnakeGameProps) {
             break;
         }
 
-        // Wrap around walls
         if (newHead.x < 0) newHead.x = GRID_SIZE - 1;
         if (newHead.x >= GRID_SIZE) newHead.x = 0;
         if (newHead.y < 0) newHead.y = GRID_SIZE - 1;
         if (newHead.y >= GRID_SIZE) newHead.y = 0;
 
-        // Check self collision
         if (prev.snake.some((segment) => segment.x === newHead.x && segment.y === newHead.y)) {
-          // Game over - snake hit itself
           if (socket) {
             socket.emit('snake-game-over', { username, score: prev.score });
           }
@@ -197,12 +171,11 @@ export function SnakeGame({ username, onGameEnd }: SnakeGameProps) {
         let newFood = prev.food;
         let newScore = prev.score;
 
-        // Check if snake ate food
         if (newHead.x === prev.food.x && newHead.y === prev.food.y) {
           newScore += 10;
           newFood = generateFood(newSnake);
         } else {
-          newSnake.pop(); // Remove tail if no food eaten
+          newSnake.pop();
         }
 
         const newState = {
@@ -212,19 +185,17 @@ export function SnakeGame({ username, onGameEnd }: SnakeGameProps) {
           score: newScore,
         };
 
-        // Broadcast state to opponent
         if (socket) {
           socket.emit('snake-update-state', newState);
         }
 
         return newState;
       });
-    }, 150); // Snake moves every 150ms
+    }, 150);
 
     return () => clearInterval(gameLoop);
   }, [gameOver, socket, username]);
 
-  // Listen for opponent snake updates
   useEffect(() => {
     if (!socket) return;
 
@@ -239,7 +210,6 @@ export function SnakeGame({ username, onGameEnd }: SnakeGameProps) {
     };
   }, [socket]);
 
-  // Draw my snake
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -247,12 +217,10 @@ export function SnakeGame({ username, onGameEnd }: SnakeGameProps) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Clear canvas
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = '#1e293b';
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // Draw grid
-    ctx.strokeStyle = '#1a1a1a';
+    ctx.strokeStyle = '#334155';
     for (let i = 0; i <= GRID_SIZE; i++) {
       ctx.beginPath();
       ctx.moveTo(i * CELL_SIZE, 0);
@@ -264,7 +232,6 @@ export function SnakeGame({ username, onGameEnd }: SnakeGameProps) {
       ctx.stroke();
     }
 
-    // Draw food
     ctx.fillStyle = '#ef4444';
     ctx.fillRect(
       mySnake.food.x * CELL_SIZE,
@@ -273,7 +240,6 @@ export function SnakeGame({ username, onGameEnd }: SnakeGameProps) {
       CELL_SIZE - 1
     );
 
-    // Draw snake
     mySnake.snake.forEach((segment, index) => {
       ctx.fillStyle = index === 0 ? '#22c55e' : '#16a34a';
       ctx.fillRect(
@@ -285,7 +251,6 @@ export function SnakeGame({ username, onGameEnd }: SnakeGameProps) {
     });
   }, [mySnake]);
 
-  // Draw opponent snake
   useEffect(() => {
     const canvas = opponentCanvasRef.current;
     if (!canvas) return;
@@ -293,12 +258,10 @@ export function SnakeGame({ username, onGameEnd }: SnakeGameProps) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Clear canvas
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = '#1e293b';
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // Draw grid
-    ctx.strokeStyle = '#1a1a1a';
+    ctx.strokeStyle = '#334155';
     for (let i = 0; i <= GRID_SIZE; i++) {
       ctx.beginPath();
       ctx.moveTo(i * CELL_SIZE, 0);
@@ -310,7 +273,6 @@ export function SnakeGame({ username, onGameEnd }: SnakeGameProps) {
       ctx.stroke();
     }
 
-    // Draw food
     ctx.fillStyle = '#ef4444';
     ctx.fillRect(
       opponentSnake.food.x * CELL_SIZE,
@@ -319,7 +281,6 @@ export function SnakeGame({ username, onGameEnd }: SnakeGameProps) {
       CELL_SIZE - 1
     );
 
-    // Draw snake
     opponentSnake.snake.forEach((segment, index) => {
       ctx.fillStyle = index === 0 ? '#ef4444' : '#dc2626';
       ctx.fillRect(
@@ -331,150 +292,124 @@ export function SnakeGame({ username, onGameEnd }: SnakeGameProps) {
     });
   }, [opponentSnake]);
 
-  const handleRestartKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      if (
-        restartInput.toLowerCase() === 'restart' ||
-        restartInput.toLowerCase() === 'play'
-      ) {
-        resetGame();
-        onGameEnd();
-      }
-      setRestartInput('');
-    }
+  const handlePlayAgain = () => {
+    resetGame();
+    onGameEnd();
   };
 
   if (gameOver && winner) {
+    const isWinner = winner === username;
+
     return (
-      <div className="min-h-screen bg-black text-green-500 p-8 font-mono">
-        <div className="max-w-2xl mx-auto">
-          <div className="mb-8">
-            {winner === username ? (
-              <>
-                <pre className="text-green-500 text-xs mb-4">
-                  {`
-██╗   ██╗██╗ ██████╗████████╗ ██████╗ ██████╗ ██╗   ██╗██╗
-██║   ██║██║██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗╚██╗ ██╔╝██║
-██║   ██║██║██║        ██║   ██║   ██║██████╔╝ ╚████╔╝ ██║
-╚██╗ ██╔╝██║██║        ██║   ██║   ██║██╔══██╗  ╚██╔╝  ╚═╝
- ╚████╔╝ ██║╚██████╗   ██║   ╚██████╔╝██║  ██║   ██║   ██╗
-  ╚═══╝  ╚═╝ ╚═════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝
-`}
-                </pre>
-                <p className="text-green-400 mb-2">$ Winner: {winner}</p>
-              </>
-            ) : (
-              <>
-                <pre className="text-red-500 text-xs mb-4">
-                  {`
-██████╗ ███████╗███████╗███████╗ █████╗ ████████╗███████╗██████╗
-██╔══██╗██╔════╝██╔════╝██╔════╝██╔══██╗╚══██╔══╝██╔════╝██╔══██╗
-██║  ██║█████╗  █████╗  █████╗  ███████║   ██║   █████╗  ██║  ██║
-██║  ██║██╔══╝  ██╔══╝  ██╔══╝  ██╔══██║   ██║   ██╔══╝  ██║  ██║
-██████╔╝███████╗██║     ███████╗██║  ██║   ██║   ███████╗██████╔╝
-╚═════╝ ╚══════╝╚═╝     ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═════╝
-`}
-                </pre>
-                <p className="text-red-400 mb-2">$ Winner: {winner}</p>
-              </>
-            )}
-            <p className="text-green-600">$ Your Score: {mySnake.score}</p>
-            <p className="text-green-700">$ Opponent Score: {opponentSnake.score}</p>
-          </div>
-
-          <div className="mb-2 text-green-500">
-            <p>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</p>
-          </div>
-
-          <div className="mb-4">
-            <div className="flex items-center mb-2">
-              <span className="text-green-500 mr-2">root@terminal:~$</span>
-              <span className="text-green-400">{restartInput}</span>
-              <span
-                style={showCursor ? { opacity: 1 } : { opacity: 0 }}
-                className="text-green-400"
-              >
-                _
-              </span>
-              <input
-                ref={restartInputRef}
-                type="text"
-                value={restartInput}
-                onChange={(e) => setRestartInput(e.target.value)}
-                onKeyDown={handleRestartKeyDown}
-                style={{ opacity: 0 }}
-                onBlur={(e) => e.target.focus()}
-                className="absolute"
-                spellCheck={false}
-                autoComplete="off"
-              />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+        <Card className="w-full max-w-md shadow-lg">
+          <CardHeader className="space-y-1 text-center">
+            <div className="flex justify-center mb-4">
+              <div className={`p-3 rounded-full ${isWinner ? 'bg-green-100' : 'bg-red-100'}`}>
+                <Trophy className={`h-8 w-8 ${isWinner ? 'text-green-600' : 'text-red-600'}`} />
+              </div>
             </div>
-          </div>
+            <CardTitle className="text-3xl font-bold">
+              {isWinner ? "Victory!" : "Defeated"}
+            </CardTitle>
+            <p className="text-muted-foreground">
+              Winner: <span className="font-semibold text-foreground">{winner}</span>
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex justify-around text-center">
+              <div>
+                <p className="text-sm text-muted-foreground">Your Score</p>
+                <p className="text-2xl font-bold">{mySnake.score}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Opponent Score</p>
+                <p className="text-2xl font-bold">{opponentSnake.score}</p>
+              </div>
+            </div>
 
-          <div className="text-green-700 text-sm mt-8">
-            <p>&gt; Type 'restart' or 'play' and press ENTER to play again</p>
-          </div>
+            <Separator />
 
-          <div className="mt-8 text-green-900 text-xs">
-            <p>System ready | Awaiting command...</p>
-          </div>
-        </div>
+            <div className="space-y-3">
+              <Button
+                onClick={handlePlayAgain}
+                className="w-full text-base py-5"
+              >
+                Play Again
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-black font-mono">
-      {/* Header */}
-      <div className="bg-black border-b-2 border-green-500 p-4">
+    <div className="h-screen w-screen flex flex-col bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="bg-white border-b shadow-sm p-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div>
-            <h2 className="text-lg font-bold text-green-500">&gt; SNAKE BATTLE</h2>
-            <p className="text-sm text-green-600">$ Time Left: {timeLeft}s</p>
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Trophy className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold">Snake Battle</h2>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                <span>Time Left: {timeLeft}s</span>
+              </div>
+            </div>
           </div>
-          <div className="text-right">
-            <p className="text-sm font-semibold text-green-400">
-              {username}: {mySnake.score}
-            </p>
-            <p className="text-sm text-green-700">
-              {opponentName}: {opponentSnake.score}
-            </p>
+          <div className="flex items-center gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span className="font-semibold">{username}</span>
+              <span className="text-muted-foreground">vs</span>
+              <span className="font-semibold">{opponentName}</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Game Area */}
       <div className="flex-1 flex items-center justify-center overflow-auto p-4">
         <div className="flex flex-row gap-4 flex-wrap justify-center">
-          {/* Your snake */}
-          <div className="flex flex-col border-2 border-green-900 flex-shrink-0">
-            <div className="bg-black px-4 py-2 border-b border-green-900">
-              <p className="text-xs font-semibold text-green-500">
-                &gt; YOUR SNAKE - Score: {mySnake.score}
-              </p>
-            </div>
-            <canvas ref={canvasRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} />
-          </div>
+          <Card className="flex flex-col border-2 border-primary/20 shadow-lg">
+            <CardHeader className="py-3">
+              <CardTitle className="text-sm font-semibold">
+                Your Snake - Score: {mySnake.score}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <canvas
+                ref={canvasRef}
+                width={CANVAS_WIDTH}
+                height={CANVAS_HEIGHT}
+                className="rounded-b-lg"
+              />
+            </CardContent>
+          </Card>
 
-          {/* Opponent's snake */}
-          <div className="flex flex-col border-2 border-red-900 flex-shrink-0">
-            <div className="bg-black px-4 py-2 border-b border-red-900">
-              <p className="text-xs font-semibold text-red-500">
-                &gt; {opponentName.toUpperCase()}'S SNAKE - Score: {opponentSnake.score}
-              </p>
-            </div>
-            <canvas
-              ref={opponentCanvasRef}
-              width={CANVAS_WIDTH}
-              height={CANVAS_HEIGHT}
-            />
-          </div>
+          <Card className="flex flex-col border-2 border-red-200 shadow-lg">
+            <CardHeader className="py-3">
+              <CardTitle className="text-sm font-semibold text-red-600">
+                {opponentName}'s Snake - Score: {opponentSnake.score}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <canvas
+                ref={opponentCanvasRef}
+                width={CANVAS_WIDTH}
+                height={CANVAS_HEIGHT}
+                className="rounded-b-lg"
+              />
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      <div className="bg-black border-t-2 border-green-500 p-2">
-        <p className="text-center text-sm text-green-600">
-          Use arrow keys to control your snake | Longest snake wins!
+      <div className="bg-white border-t shadow-sm p-2">
+        <p className="text-center text-sm text-muted-foreground">
+          Use arrow keys to control your snake - Longest snake wins!
         </p>
       </div>
     </div>

@@ -33,7 +33,7 @@ function MazeComponent({
   }, [playerPosition]);
 
   // Handle keyboard input with continuous movement
-  const currentDirection = useRef<string | null>(null);
+  const pressedKeys = useRef<Set<string>>(new Set());
   const playerPositionRef = useRef(playerPosition);
 
   useEffect(() => {
@@ -46,16 +46,14 @@ function MazeComponent({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
         e.preventDefault();
-        currentDirection.current = e.key;
+        pressedKeys.current.add(e.key);
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
         e.preventDefault();
-        if (currentDirection.current === e.key) {
-          currentDirection.current = null;
-        }
+        pressedKeys.current.delete(e.key);
       }
     };
 
@@ -64,34 +62,28 @@ function MazeComponent({
 
     // Continuous movement loop
     const moveInterval = setInterval(() => {
-      if (!currentDirection.current) return;
+      if (pressedKeys.current.size === 0) return;
 
       const currentPos = playerPositionRef.current;
       const { row, col } = currentPos;
       const currentCell = maze[row][col];
       let newPosition = { ...currentPos };
 
-      switch (currentDirection.current) {
-        case "ArrowUp":
-          if (!currentCell.walls.top && row > 0) {
-            newPosition = { row: row - 1, col };
-          }
+      // Check all pressed keys and move in the first available direction
+      // Priority: most recently pressed key gets checked first
+      const directions = [
+        { key: "ArrowUp", canMove: !currentCell.walls.top && row > 0, newPos: { row: row - 1, col } },
+        { key: "ArrowDown", canMove: !currentCell.walls.bottom && row < mazeRows - 1, newPos: { row: row + 1, col } },
+        { key: "ArrowLeft", canMove: !currentCell.walls.left && col > 0, newPos: { row, col: col - 1 } },
+        { key: "ArrowRight", canMove: !currentCell.walls.right && col < mazeCols - 1, newPos: { row, col: col + 1 } },
+      ];
+
+      // Try to move in any pressed direction that's available
+      for (const direction of directions) {
+        if (pressedKeys.current.has(direction.key) && direction.canMove) {
+          newPosition = direction.newPos;
           break;
-        case "ArrowDown":
-          if (!currentCell.walls.bottom && row < mazeRows - 1) {
-            newPosition = { row: row + 1, col };
-          }
-          break;
-        case "ArrowLeft":
-          if (!currentCell.walls.left && col > 0) {
-            newPosition = { row, col: col - 1 };
-          }
-          break;
-        case "ArrowRight":
-          if (!currentCell.walls.right && col < mazeCols - 1) {
-            newPosition = { row, col: col + 1 };
-          }
-          break;
+        }
       }
 
       if (newPosition.row !== row || newPosition.col !== col) {
@@ -103,7 +95,7 @@ function MazeComponent({
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
       clearInterval(moveInterval);
-      currentDirection.current = null;
+      pressedKeys.current.clear();
     };
   }, [maze, mazeRows, mazeCols, onMove, isActive]);
 
@@ -115,12 +107,12 @@ function MazeComponent({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Clear canvas with black background
-    ctx.fillStyle = "#000000";
+    // Clear canvas with modern slate background
+    ctx.fillStyle = "#1e293b";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Draw maze
-    ctx.strokeStyle = "#22c55e";
+    // Draw maze with blue walls
+    ctx.strokeStyle = "#3b82f6";
     ctx.lineWidth = 2;
 
     for (let row = 0; row < mazeRows; row++) {
@@ -151,8 +143,8 @@ function MazeComponent({
       }
     }
 
-    // Draw trail (visited positions)
-    ctx.fillStyle = "rgba(192, 216, 14, 0.572)"; // Light green with transparency
+    // Draw trail (visited positions) with purple/indigo tint
+    ctx.fillStyle = "rgba(139, 92, 246, 0.25)";
     visitedPositions.current.forEach((posKey) => {
       const [row, col] = posKey.split(",").map(Number);
       const x = col * cellSize;
@@ -160,8 +152,8 @@ function MazeComponent({
       ctx.fillRect(x, y, cellSize, cellSize);
     });
 
-    // Draw exit marker (bottom-right corner)
-    ctx.fillStyle = "#22c55e";
+    // Draw exit marker (bottom-right corner) with yellow/amber
+    ctx.fillStyle = "#fbbf24";
     const exitX = (mazeCols - 1) * cellSize;
     const exitY = (mazeRows - 1) * cellSize;
     ctx.fillRect(
@@ -181,8 +173,8 @@ function MazeComponent({
       ctx.fill();
     }
 
-    // Draw player (green dot) - drawn last so it's on top
-    ctx.fillStyle = "#22c55e";
+    // Draw player (blue dot) - drawn last so it's on top
+    ctx.fillStyle = "#3b82f6";
     const playerX = playerPosition.col * cellSize + cellSize / 2;
     const playerY = playerPosition.row * cellSize + cellSize / 2;
     ctx.beginPath();
@@ -191,7 +183,7 @@ function MazeComponent({
   }, [maze, playerPosition, opponentPosition, cellSize, mazeRows, mazeCols]);
 
   return (
-    <div className="flex items-center justify-center bg-black">
+    <div className="flex items-center justify-center bg-slate-800">
       <canvas
         ref={canvasRef}
         width={mazeCols * cellSize}
