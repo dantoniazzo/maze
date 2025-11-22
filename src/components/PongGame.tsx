@@ -70,6 +70,7 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
     }
   }, [opponentDisconnected, username]);
 
+  // Keyboard input - no dependencies that change
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
@@ -91,8 +92,9 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
     };
   }, []);
 
+  // Paddle movement - only depends on gameOver
   useEffect(() => {
-    if (gameOver) return;
+    if (gameOver || !socket) return;
 
     const interval = setInterval(() => {
       let newY = localPaddleYRef.current;
@@ -106,16 +108,14 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
 
       if (newY !== localPaddleYRef.current) {
         localPaddleYRef.current = newY;
-        if (socket) {
-          socket.emit('pong-paddle-move', newY);
-        }
+        socket.emit('pong-paddle-move', newY);
       }
     }, 1000 / 60);
 
     return () => clearInterval(interval);
   }, [gameOver, socket]);
 
-  // Handle opponent paddle movement without re-renders
+  // Handle opponent paddle movement - NO dependencies on scores
   useEffect(() => {
     if (!socket) return;
 
@@ -134,17 +134,20 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
     };
   }, [socket, isPlayer1]);
 
-  // Handle game state updates for player 2 without re-renders
+  // Handle game state updates for player 2 - NO dependencies on scores
   useEffect(() => {
     if (!socket || isPlayer1) return;
 
     const handleGameStateUpdate = (state: PongState) => {
       gameStateRef.current = state;
 
-      // Only update scores if they changed (triggers re-render only for score updates)
-      if (state.player1Score !== scores.player1 || state.player2Score !== scores.player2) {
-        setScores({ player1: state.player1Score, player2: state.player2Score });
-      }
+      // Only update scores if they changed (using a functional update to avoid dependency)
+      setScores((prevScores) => {
+        if (state.player1Score !== prevScores.player1 || state.player2Score !== prevScores.player2) {
+          return { player1: state.player1Score, player2: state.player2Score };
+        }
+        return prevScores;
+      });
     };
 
     socket.on('pong-game-state', handleGameStateUpdate);
@@ -152,11 +155,11 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
     return () => {
       socket.off('pong-game-state', handleGameStateUpdate);
     };
-  }, [socket, isPlayer1, scores]);
+  }, [socket, isPlayer1]);
 
-  // Game loop for player 1 only
+  // Game loop for player 1 only - NO dependencies on scores
   useEffect(() => {
-    if (!isPlayer1 || gameOver) return;
+    if (!isPlayer1 || gameOver || !socket) return;
 
     const interval = setInterval(() => {
       const prev = gameStateRef.current;
@@ -235,8 +238,8 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
         player2Score: newPlayer2Score,
       };
 
-      // Update scores in state if changed (triggers re-render only for score updates)
-      if (newPlayer1Score !== scores.player1 || newPlayer2Score !== scores.player2) {
+      // Update scores in state if changed (using functional update to avoid dependency)
+      if (newPlayer1Score !== prev.player1Score || newPlayer2Score !== prev.player2Score) {
         setScores({ player1: newPlayer1Score, player2: newPlayer2Score });
       }
 
@@ -244,22 +247,17 @@ export function PongGame({ username, onGameEnd }: PongGameProps) {
       if (newPlayer1Score >= WINNING_SCORE || newPlayer2Score >= WINNING_SCORE) {
         const winnerName = newPlayer1Score >= WINNING_SCORE ? username : opponentName;
 
-        if (socket) {
-          socket.emit('pong-game-over', winnerName);
-        }
-
+        socket.emit('pong-game-over', winnerName);
         setGameOver(true);
         setWinner(winnerName);
       }
 
       // Broadcast state to opponent
-      if (socket) {
-        socket.emit('pong-update-state', gameStateRef.current);
-      }
+      socket.emit('pong-update-state', gameStateRef.current);
     }, 1000 / 60);
 
     return () => clearInterval(interval);
-  }, [isPlayer1, gameOver, socket, username, opponentName, scores]);
+  }, [isPlayer1, gameOver, socket, username, opponentName]);
 
   // Draw game at 60fps
   useEffect(() => {
